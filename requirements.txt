@@ -1,0 +1,11 @@
+# Data Manipulation
+pandas==2.2.0
+numpy==1.26.4
+
+# API & Web Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+
+# Code Quality
+black==24.2.0
+flake8==7.0.0
