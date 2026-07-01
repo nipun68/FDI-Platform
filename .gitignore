@@ -1,0 +1,23 @@
+# Virtual Environments
+venv/
+env/
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*.$py.class
+
+# Data files (we don't want to push heavy CSVs/JSONs to Git)
+*.csv
+*.json
+data/raw/
+data/processed/
