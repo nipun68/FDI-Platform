@@ -24,3 +24,6 @@ data/processed/
 
 # ML Models
 models/
+
+# CatBoost output
+catboost_info/
