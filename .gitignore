@@ -26,4 +26,7 @@ data/processed/
 models/
 
 # CatBoost output
-catboost_info/
+catboost_info/
+
+# Synthetic Data
+data/synthetic/
