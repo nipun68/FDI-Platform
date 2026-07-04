@@ -3,9 +3,9 @@ import os
 import joblib
 import shap
 import matplotlib.pyplot as plt
-                               
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATA_PATH = os.path.join(PROJECT_ROOT, "data", "features", "penalties_features.csv")
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "synthetic", "synthetic_penalties_10k.csv")
 MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "calibrated_penalty_model.joblib")
 
 def main():
@@ -13,44 +13,43 @@ def main():
     df = pd.read_csv(DATA_PATH)
     
     calibrated_model = joblib.load(MODEL_PATH)
-    
     base_model = calibrated_model.calibrated_classifiers_[0].estimator
-    
-    features = ['shot_distance', 'shot_angle', 'is_shootout']
-    X = df[features]
-    
-    sample_index = 0
-    sample_penalty = X.iloc[[sample_index]]
-    actual_outcome = df.iloc[sample_index]['is_goal']
-    player_name = df.iloc[sample_index]['player_name']
-    
-    print(f"\nExplaining penalty for: {player_name}")
-    print(f"Actual Outcome: {'Goal' if actual_outcome == 1 else 'No Goal'}")
-    print(f"Features: \n{sample_penalty}")
-    
 
+    features = [col for col in df.columns if col != 'is_goal']
+    X = df[features]
+
+    X_encoded = pd.get_dummies(X)
+
+    sample_index = 0
+    sample_penalty = X_encoded.iloc[[sample_index]]
+    actual_outcome = df.iloc[sample_index]['is_goal']
+    
+    print(f"\nExplaining penalty at index {sample_index}")
+    print(f"Actual Outcome: {'Goal' if actual_outcome == 1 else 'No Goal'}")
+    
     print("\nCalculating SHAP values (this may take a few seconds)...")
     explainer = shap.TreeExplainer(base_model)
     shap_values = explainer.shap_values(sample_penalty)
     
-    
     print("\n--- SHAP Explanation ---")
     print("Base Value (Average prediction for all penalties):", explainer.expected_value)
+
+    feature_contributions = list(zip(sample_penalty.columns, shap_values[0]))
+    feature_contributions.sort(key=lambda x: abs(x[1]), reverse=True)
     
-    
-    for i, feature in enumerate(features):
-        # shap_values[0][i] is the SHAP value for the i-th feature
-        contribution = shap_values[0][i]
+    for feature, contribution in feature_contributions[:5]:
         direction = "increased" if contribution > 0 else "decreased"
-        print(f"Feature '{feature}' (Value: {sample_penalty[feature].values[0]}) {direction} the probability by {abs(contribution):.4f}")
-          
+        val = sample_penalty[feature].values[0]
+        print(f"Feature '{feature}' (Value: {val}) {direction} the probability by {abs(contribution):.4f}")
+
     plt.figure()
     shap.plots._waterfall.waterfall_legacy(
         explainer.expected_value, 
         shap_values[0], 
         sample_penalty.iloc[0],
-        feature_names=features,
-        show=False
+        feature_names=X_encoded.columns,
+        show=False,
+        max_display=10
     )
 
     plots_dir = os.path.join(PROJECT_ROOT, "data", "plots")

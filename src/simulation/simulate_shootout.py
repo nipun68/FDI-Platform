@@ -27,14 +27,11 @@ def simulate_shootout():
         {'name': 'Enemy Vet', 'player_penalty_conversion_rate': 0.78, 'career_penalty_attempts': 35, 'recent_penalty_form': 0.72}
     ]
     
-    n_simulations = 100
+    n_simulations = 10000
     print(f"Pre-computing probabilities for {n_simulations} shootouts (Vectorized)...")
     
-    # 2. Pre-generate ALL random scenarios for all kicks (vectorized)
-    # Max kicks needed per team: 5 regular + up to 10 sudden death = 15 kicks per simulation
     max_kicks = 15 
     
-    # We will store the pre-calculated probabilities here
     team_a_probs = np.zeros((n_simulations, max_kicks))
     team_b_probs = np.zeros((n_simulations, max_kicks))
     
@@ -42,27 +39,21 @@ def simulate_shootout():
         shooter_a = team_a[kick_idx % 5]
         shooter_b = team_b[kick_idx % 5]
         
-        # Generate 10,000 random scenarios for Team A's kick
         df_a = generate_random_kicks(shooter_a, n_simulations)
-        # Generate 10,000 random scenarios for Team B's kick
         df_b = generate_random_kicks(shooter_b, n_simulations)
         
-        # One-hot encode and align columns (Done ONCE per kick_idx, not 10,000 times!)
         df_a_enc = pd.get_dummies(df_a)
         df_b_enc = pd.get_dummies(df_b)
         
-        # Get the features the model was trained on
         trained_features = model.calibrated_classifiers_[0].estimator.feature_names_
         df_a_aligned = df_a_enc.reindex(columns=trained_features, fill_value=0)
         df_b_aligned = df_b_enc.reindex(columns=trained_features, fill_value=0)
         
-        # Ask the model for all 10,000 probabilities at once
         team_a_probs[:, kick_idx] = model.predict_proba(df_a_aligned)[:, 1]
         team_b_probs[:, kick_idx] = model.predict_proba(df_b_aligned)[:, 1]
         
     print("Pre-computation complete. Running simulation loop...")
     
-    # 3. Run the pure simulation loop (extremely fast, no ML calls here)
     team_a_wins = 0
     team_b_wins = 0
     
@@ -71,17 +62,14 @@ def simulate_shootout():
         score_b = 0
         
         for kick_idx in range(max_kicks):
-            # Team A shoots
             if np.random.rand() < team_a_probs[sim_idx, kick_idx]:
                 score_a += 1
                 
-            # Team B shoots
             if np.random.rand() < team_b_probs[sim_idx, kick_idx]:
                 score_b += 1
                 
-            # Early win check
             remaining_kicks = 5 - (kick_idx + 1)
-            if kick_idx >= 4: # Only check after 5 kicks
+            if kick_idx >= 4: 
                 remaining_kicks = 0
                 
             if kick_idx < 4:
@@ -90,7 +78,6 @@ def simulate_shootout():
                 if score_b > score_a + (5 - (kick_idx + 1)):
                     break
             
-        # Sudden Death check
         sudden_death_idx = 5
         while score_a == score_b and sudden_death_idx < max_kicks:
             if np.random.rand() < team_a_probs[sim_idx, sudden_death_idx]:
@@ -110,7 +97,6 @@ def simulate_shootout():
     print(f"Team B Wins: {team_b_wins} ({(team_b_wins/n_simulations)*100:.1f}%)")
 
 def generate_random_kicks(shooter_profile, n):
-    """Generates a DataFrame of n random kicks for a given shooter."""
     shot_dir = np.random.choice(['Left', 'Right', 'Center'], size=n)
     gk_dir = np.random.choice(['Left', 'Right', 'Center'], size=n)
     gk_correct = (shot_dir == gk_dir).astype(int)
