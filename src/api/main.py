@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import joblib
 import os
@@ -21,6 +22,14 @@ app = FastAPI(
     title="Football Decision Intelligence API",
     description="Enterprise API for predicting penalty outcomes using advanced 7-category features.",
     version="2.0.0"
+)
+# Allow your React frontend to talk to the API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, replace * with your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class PenaltyInput(BaseModel):
