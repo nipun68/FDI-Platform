@@ -22,20 +22,19 @@ def main():
     
     np.random.seed(42) 
 
+    synth_distance = np.random.normal(11.0, 0.2, n_samples) 
+    synth_angle = np.random.normal(22.0, 1.0, n_samples)   
+    synth_shootout = np.random.choice([0, 1], size=n_samples, p=[0.7, 0.3]) 
     
-    synth_distance = np.random.normal(real_dist_mean, real_dist_std, n_samples)
-    synth_angle = np.random.normal(real_angle_mean, real_angle_std, n_samples)
-    synth_shootout = np.random.choice([0, 1], size=n_samples, p=[0.7, 0.3])
-     
     synth_goals = []
     for dist, angle, shootout in zip(synth_distance, synth_angle, synth_shootout):     
-        prob = real_goal_rate
+        prob = 0.75
         if shootout == 1:
             prob -= 0.10
-                 
-        prob -= (dist - real_dist_mean) * 0.01
-        prob -= (angle - real_angle_mean) * 0.01
-   
+
+        prob -= (dist - 11.0) * 0.01
+        prob -= (angle - 22.0) * 0.01
+
         prob = max(0.10, min(0.95, prob))
    
         goal = np.random.choice([1, 0], p=[prob, 1-prob])

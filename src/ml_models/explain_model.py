@@ -19,7 +19,6 @@ def main():
     features = ['shot_distance', 'shot_angle', 'is_shootout']
     X = df[features]
     
-
     sample_index = 0
     sample_penalty = X.iloc[[sample_index]]
     actual_outcome = df.iloc[sample_index]['is_goal']

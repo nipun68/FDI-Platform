@@ -6,57 +6,55 @@ from sklearn.calibration import CalibratedClassifierCV
 from catboost import CatBoostClassifier
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
-# Define paths
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATA_PATH = os.path.join(PROJECT_ROOT, "data", "features", "penalties_features.csv")
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "synthetic", "synthetic_penalties_5k.csv")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 
 def main():
-    print("Loading features...")
+    print("Loading SCALED synthetic features (5,000 penalties)...")
     df = pd.read_csv(DATA_PATH)
-    
-    # Features 
+
     features = ['shot_distance', 'shot_angle', 'is_shootout']
     target = 'is_goal'
     
     X = df[features]
     y = df[target]
     
-    # Train/Test Split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 1. Train CatBoost Model
-    print("Training CatBoost model...")
+    print(f"Training set size: {len(X_train)}")
+    print(f"Testing set size: {len(X_test)}")
+
+    print("\nTraining CatBoost model on scaled data...")
     base_model = CatBoostClassifier(
-        iterations=100, 
-        depth=3, 
-        learning_rate=0.1, 
+        iterations=200, 
+        depth=4,        
+        learning_rate=0.05, 
         verbose=0, 
         random_seed=42
     )
     base_model.fit(X_train, y_train)
-    
-    # 2. Calibrate the Model
+
     print("Calibrating probabilities using Isotonic Regression...")
-    calibrated_model = CalibratedClassifierCV(base_model, method='isotonic', cv=3)
+    calibrated_model = CalibratedClassifierCV(base_model, method='isotonic', cv=5) 
     calibrated_model.fit(X_train, y_train)
-    
+
     y_pred_proba = calibrated_model.predict_proba(X_test)[:, 1]
     brier = brier_score_loss(y_test, y_pred_proba)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     
-    print("\n--- Calibrated Model Evaluation ---")
+    print("\n--- Scaled Model Evaluation ---")
     print(f"Brier Score (Lower is better): {brier:.4f}")
     print(f"ROC-AUC (Higher is better): {roc_auc:.4f}")
-    
+
     os.makedirs(MODELS_DIR, exist_ok=True)
     model_path = os.path.join(MODELS_DIR, "calibrated_penalty_model.joblib")
     joblib.dump(calibrated_model, model_path)
-    print(f"\nCalibrated model saved to: {model_path}")
-    
+    print(f"\n✅ Scaled model saved to: {model_path}")
+
     sample_data = pd.DataFrame({
-        'shot_distance': [12.0],
-        'shot_angle': [18.0],
+        'shot_distance': [11.0],
+        'shot_angle': [22.0],
         'is_shootout': [1]
     })
     

@@ -3,11 +3,9 @@ import numpy as np
 import os
 import math
 
-
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 RAW_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "penalties_raw.csv")
 FEATURES_DIR = os.path.join(PROJECT_ROOT, "data", "features")
-
 
 PITCH_LENGTH = 120
 PITCH_WIDTH = 80
@@ -24,8 +22,7 @@ def calculate_angle(x, y):
     goal_x = PITCH_LENGTH
     goal_left_y = (PITCH_WIDTH / 2) - (GOAL_WIDTH / 2)
     goal_right_y = (PITCH_WIDTH / 2) + (GOAL_WIDTH / 2)
-    
-    
+
     dist_left = math.sqrt((x - goal_x)**2 + (y - goal_left_y)**2)
     dist_right = math.sqrt((x - goal_x)**2 + (y - goal_right_y)**2)
     
@@ -36,8 +33,7 @@ def calculate_angle(x, y):
         return 0.0
         
     cos_angle = (dist_left**2 + dist_right**2 - GOAL_WIDTH**2) / (2 * dist_left * dist_right)
-    
-   
+
     cos_angle = max(min(cos_angle, 1), -1)
     
     angle_rad = math.acos(cos_angle)
@@ -52,8 +48,7 @@ def categorize_placement(y, z):
         horizontal = "Left"
     else:
         horizontal = "Right"
-        
-    
+
     if z is None or pd.isna(z):
         return f"{horizontal} (Unknown)"
     
@@ -61,7 +56,6 @@ def categorize_placement(y, z):
         vertical = "Low"
     else:
         vertical = "High"
-        
     return f"{vertical} {horizontal}"
 
 def main():
@@ -73,17 +67,11 @@ def main():
     df = pd.read_csv(RAW_DATA_PATH)
     
     print("Engineering features...")
-    
     df['shot_distance'] = df.apply(lambda row: calculate_distance(row['start_x'], row['start_y']), axis=1)
     df['shot_angle'] = df.apply(lambda row: calculate_angle(row['start_x'], row['start_y']), axis=1)
-    
-    
     df['placement_zone'] = df.apply(lambda row: categorize_placement(row['end_y'], row['end_z']), axis=1)
-    
-    
     df['is_shootout'] = df['period'].apply(lambda x: 1 if x == 5 else 0)
-    
-    
+
     os.makedirs(FEATURES_DIR, exist_ok=True)
     output_path = os.path.join(FEATURES_DIR, "penalties_features.csv")
     df.to_csv(output_path, index=False)
