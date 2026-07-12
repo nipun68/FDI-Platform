@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fdi-platform-api
+  labels:
+    app: fdi-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fdi-platform
+  template:
+    metadata:
+      labels:
+        app: fdi-platform
+    spec:
+      containers:
+      - name: fdi-api
+        image: fdi-platform:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fdi-platform-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: fdi-platform
+  ports:
+    - port: 80
+      targetPort: 8000

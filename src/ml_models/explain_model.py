@@ -5,59 +5,49 @@ import shap
 import matplotlib.pyplot as plt
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DATA_PATH = os.path.join(PROJECT_ROOT, "data", "synthetic", "synthetic_penalties_10k.csv")
-MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "calibrated_penalty_model.joblib")
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "synthetic", "synthetic_penalties_50k.csv")
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 
 def main():
-    print("Loading model and data...")
+    print("Loading Outcome Interaction Model & Data...")
     df = pd.read_csv(DATA_PATH)
     
-    calibrated_model = joblib.load(MODEL_PATH)
-    base_model = calibrated_model.calibrated_classifiers_[0].estimator
-
-    features = [col for col in df.columns if col != 'is_goal']
-    X = df[features]
-
-    X_encoded = pd.get_dummies(X)
-
-    sample_index = 0
-    sample_penalty = X_encoded.iloc[[sample_index]]
-    actual_outcome = df.iloc[sample_index]['is_goal']
+    # Load all 3 models
+    striker_model = joblib.load(os.path.join(MODELS_DIR, "striker_agent_model.joblib"))
+    gk_model = joblib.load(os.path.join(MODELS_DIR, "gk_agent_model.joblib"))
+    outcome_model = joblib.load(os.path.join(MODELS_DIR, "outcome_interaction_model.joblib"))
     
-    print(f"\nExplaining penalty at index {sample_index}")
-    print(f"Actual Outcome: {'Goal' if actual_outcome == 1 else 'No Goal'}")
+    base_features = [
+        'player_id', 'player_penalty_conversion_rate', 'career_penalty_attempts', 
+        'recent_penalty_form', 'is_shootout', 'match_stage', 'minute_of_match', 
+        'fatigue_index', 'run_up_style', 'pause_before_shot', 
+        'cv_body_lean_angle', 'cv_run_up_speed', 'goalkeeper_id', 
+        'goalkeeper_penalty_save_rate', 'goalkeeper_diving_bias', 
+        'keeper_experience_level', 'shooter_vs_keeper_history', 
+        'psychological_advantage_index'
+    ]
     
-    print("\nCalculating SHAP values (this may take a few seconds)...")
-    explainer = shap.TreeExplainer(base_model)
-    shap_values = explainer.shap_values(sample_penalty)
+    X = df[base_features].head(100) # Explain top 100 to save memory
+    X_encoded = pd.get_dummies(X, columns=['match_stage', 'run_up_style', 'goalkeeper_diving_bias'])
     
-    print("\n--- SHAP Explanation ---")
-    print("Base Value (Average prediction for all penalties):", explainer.expected_value)
-
-    feature_contributions = list(zip(sample_penalty.columns, shap_values[0]))
-    feature_contributions.sort(key=lambda x: abs(x[1]), reverse=True)
+    # Generate Agent predictions for the Outcome model
+    X_encoded['predicted_shot_dir'] = striker_model.predict(X_encoded)
+    X_encoded['predicted_gk_dive'] = gk_model.predict(X_encoded)
     
-    for feature, contribution in feature_contributions[:5]:
-        direction = "increased" if contribution > 0 else "decreased"
-        val = sample_penalty[feature].values[0]
-        print(f"Feature '{feature}' (Value: {val}) {direction} the probability by {abs(contribution):.4f}")
-
+    print("Calculating SHAP values...")
+    explainer = shap.TreeExplainer(outcome_model)
+    shap_values = explainer.shap_values(X_encoded)
+    
+    # Plot summary for the top features
     plt.figure()
-    shap.plots._waterfall.waterfall_legacy(
-        explainer.expected_value, 
-        shap_values[0], 
-        sample_penalty.iloc[0],
-        feature_names=X_encoded.columns,
-        show=False,
-        max_display=10
-    )
-
+    shap.summary_plot(shap_values, X_encoded, show=False)
+    
     plots_dir = os.path.join(PROJECT_ROOT, "data", "plots")
     os.makedirs(plots_dir, exist_ok=True)
-    plot_path = os.path.join(plots_dir, "shap_explanation.png")
+    plot_path = os.path.join(plots_dir, "shap_outcome_summary.png")
     plt.tight_layout()
     plt.savefig(plot_path, bbox_inches='tight')
-    print(f"\n✅ SHAP waterfall plot saved to: {plot_path}")
+    print(f"\n✅ SHAP summary plot saved to: {plot_path}")
 
 if __name__ == "__main__":
     main()

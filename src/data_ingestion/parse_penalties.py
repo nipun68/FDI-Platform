@@ -3,7 +3,6 @@ import os
 import glob
 import pandas as pd
 
-# Define paths
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 EVENTS_DIR = os.path.join(PROJECT_ROOT, "data", "raw", "statsbomb", "events")
 PROCESSED_DIR = os.path.join(PROJECT_ROOT, "data", "processed")
@@ -13,7 +12,6 @@ def extract_penalties():
     
     all_penalties = []
     
-    # Find all JSON files in the events directory
     event_files = glob.glob(os.path.join(EVENTS_DIR, "*.json"))
     print(f"Found {len(event_files)} match files to process...")
 
@@ -41,7 +39,7 @@ def extract_penalties():
                         'outcome_name': event.get('shot', {}).get('outcome', {}).get('name'),
                     }
                     
-                    # 2. Extract location (x, y) - StatsBomb uses [0-120] for x, [0-80] for y
+                    # Extract location (x, y) - StatsBomb uses [0-120] for x, [0-80] for y
                     location = event.get('location')
                     if location:
                         penalty_data['start_x'] = location[0]

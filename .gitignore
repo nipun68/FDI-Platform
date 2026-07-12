@@ -30,3 +30,4 @@ catboost_info/
 
 # Synthetic Data
 data/synthetic/
+.env.local
